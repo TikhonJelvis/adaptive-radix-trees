@@ -43,12 +43,16 @@ data Node48 a = Node48 !(Vector (Maybe Chunk)) !(Vector (ART a)) deriving (Show,
 -- | Stores 49–256 children in a chunk-indexed array of 256 elements.
 newtype Node256 a = Node256 (Vector (Maybe (ART a))) deriving (Show, Eq)
 
+  -- TODO: Make this representation more efficient?
+data Children a = N4   !(Node4   a)
+                | N16  !(Node16  a)
+                | N48  !(Node48  a)
+                | N256 !(Node256 a)
+                  deriving (Show, Eq)
+
 data ART a = Empty
            | Leaf Key a
-           | N4   Int Prefix !(Node4   a)
-           | N16  Int Prefix !(Node16  a)
-           | N48  Int Prefix !(Node48  a)
-           | N256 Int Prefix !(Node256 a)
+           | Node Int Prefix (Children a)
              deriving (Show, Eq)
 
 get4 :: Node4 a -> Chunk -> Maybe (ART a)
@@ -79,19 +83,17 @@ checkPrefix depth prefix key = prefix' == Byte.take (Byte.length prefix') key
 
 lookup :: Key -> ART a -> Maybe a
 lookup key = go key 0
-  where go !_   depth Empty                 = Nothing
-        go !_   depth (Leaf k v)            = [v | key == k]
-        go !key depth (N4 _ prefix node4)   =
-          get4 node4 (Byte.head key) >>= withPrefix key depth prefix
-        go !key depth (N16 _ prefix node16)  =
-          get16 node16 (Byte.head key) >>= withPrefix key depth prefix
-        go !key depth (N48 _ prefix node48)  =
-          get48 node48 (Byte.head key) >>= withPrefix key depth prefix
-        go !key depth (N256 _ prefix node256)  =
-          get256 node256 (Byte.head key) >>= withPrefix key depth prefix
-
-        withPrefix key depth prefix tree =
-          guard (checkPrefix depth prefix key) >> go (Byte.tail key) (depth + 1) tree
+  where go !_   depth Empty                    = Nothing
+        go !_   depth (Leaf k v)               = [v | key == k]
+        go !key depth (Node _ prefix children) =
+          case children of
+            N4   nodes -> get4   nodes chunk >>= withPrefix
+            N16  nodes -> get16  nodes chunk >>= withPrefix
+            N48  nodes -> get48  nodes chunk >>= withPrefix
+            N256 nodes -> get256 nodes chunk >>= withPrefix
+          where chunk = Byte.head key
+                withPrefix tree = guard (checkPrefix depth prefix key) >>
+                                  go (Byte.tail key) (depth + 1) tree
 
    -- TODO: Organize tests!
 -- test_vec = map go [0..24] == map (flip List.elemIndex ls) [0..24]
