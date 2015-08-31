@@ -29,14 +29,11 @@ vector !~ key = vector ! (fromIntegral key)
 
              -- TODO: Figure out how to use unboxed vectors here!
 
--- | Stores 1–4 children as an array of up to 4 key/child pairs. This is
--- handled efficiently under the hood because an unboxed vector of
--- pairs is represented as a pair of unboxed vectors.
-newtype Node4 a = Node4 (Vector (Chunk, ART a)) deriving (Show, Eq)
+-- | Stores 1–4 children as an array of up to 4 key/child pairs.
+data Node4 a = Node4 !(Vector Chunk) !(Vector (ART a)) deriving (Show, Eq)
 
--- | Stores 5–16 children as an array of up to 16 key/child pairs. The relevant
--- key can be found with a binary search.
-newtype Node16 a = Node16 (Vector (Chunk, ART a)) deriving (Show, Eq)
+-- | Stores 5–16 children as an array of up to 16 key/child pairs.
+data Node16 a = Node16 !(Vector Chunk) !(Vector (ART a)) deriving (Show, Eq)
 
 -- | Stores 17–48 children as a chunk-indexed 256-element array of
 -- keys into an array of 48 children.
@@ -58,16 +55,16 @@ data ART a = Empty
              deriving (Show, Eq)
 
 get4 :: Node4 a -> Chunk -> Maybe (ART a)
-get4 (Node4 pairs) chunk = snd <$> V.find ((== chunk) . fst) pairs
+get4 (Node4 chunks children) chunk = (children !) <$> V.findIndex (== chunk) chunks
 
 get16 :: Node16 a -> Chunk -> Maybe (ART a)
-get16 (Node16 pairs) chunk = go 0 (V.length pairs)
+get16 (Node16 chunks children) chunk = (children !) <$> go 0 (V.length chunks)
   where go !from !to =
-          let i      = from + (to - from) `div` 2
-              (k, v) = pairs ! i
+          let i = from + (to - from) `div` 2
+              k = chunks ! i
           in
           if | i + 1 == from || i == to -> Nothing
-             | k == chunk             -> Just v
+             | k == chunk             -> Just i
              | k < chunk             -> go (i + 1) to
              | otherwise             -> go from i
 
@@ -117,7 +114,7 @@ pairN4 :: Key -> ART a -> Key -> ART a -> ART a
 pairN4 k1 v1 k2 v2 = Node depth prefix 2 (N4 children)
   where S4 depth prefix k1' k2' = splitKeys k1 k2
         (chunk1, chunk2) = (Byte.head k1', Byte.head k2')
-        children = Node4 $ V.fromListN 4 [(chunk1, v1), (chunk2, v2)]
+        children = Node4 (V.fromList [chunk1, chunk2]) (V.fromList [v1, v2])
 
 insertWith :: (a -> a -> a) -> Key -> a -> ART a -> ART a
 insertWith f k v Empty       = Leaf k v
