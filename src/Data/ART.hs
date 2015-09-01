@@ -97,33 +97,25 @@ lookup key = go key
                 withPrefix next = guard (checkPrefix depth prefix key) >>
                                   go key next
 
-data S4 a b c d = S4 !a !b !c !d
-
-                -- TODO: figure out more efficient version?
--- | Extract the shared prefix, if any, from the two given keys.
-splitKeys :: Key -> Key -> S4 Depth Prefix Key Key
-splitKeys !k1 !k2 = S4 depth prefix (Byte.drop depth k1) (Byte.drop depth k2)
-  where prefix = go k1 k2
-        depth = Byte.length prefix
-        go k1 k2
-          | Byte.null k1 || Byte.null k2 = Byte.empty
-          | chunk1 == chunk2             = Byte.cons chunk1 $ go rest1 rest2
-          | otherwise                   = Byte.empty
-          where Just (chunk1, rest1) = Byte.uncons k1
-                Just (chunk2, rest2) = Byte.uncons k2
+sharedPrefix :: Key -> Key -> Prefix
+sharedPrefix !k1 !k2 = Byte.take (go 0) k1
+  where limit = min (Byte.length k1) (Byte.length k2)
+        go n | n == limit                               = n
+             | Byte.index k1 n == Byte.index k2 n       = go (n + 1)
+             | otherwise                               = n
 
 -- | Create a Node4 with the two given elements an everything else empty.
-pairN4 :: Key -> ART a -> Key -> ART a -> ART a
-pairN4 k1 v1 k2 v2 = Node depth prefix 2 (N4 children)
-  where S4 depth prefix k1' k2' = splitKeys k1 k2
-        (chunk1, chunk2) = (Byte.head k1', Byte.head k2')
-        children = Node4 (V.fromList [chunk1, chunk2]) (V.fromList [v1, v2])
+-- pairN4 :: Key -> ART a -> Key -> ART a -> ART a
+-- pairN4 k1 v1 k2 v2 = Node depth prefix 2 (N4 children)
+--   where S4 depth prefix k1' k2' = splitKeys k1 k2
+--         (chunk1, chunk2) = (Byte.head k1', Byte.head k2')
+--         children = Node4 (V.fromList [chunk1, chunk2]) (V.fromList [v1, v2])
 
-insertWith :: (a -> a -> a) -> Key -> a -> ART a -> ART a
-insertWith f k v Empty       = Leaf k v
-insertWith f k v (Leaf k' v')
-  | k == k' = Leaf k (f v v')
-  | otherwise = pairN4 k (Leaf k v) k' (Leaf k' v')
+-- insertWith :: (a -> a -> a) -> Key -> a -> ART a -> ART a
+-- insertWith f k v Empty       = Leaf k v
+-- insertWith f k v (Leaf k' v')
+--   | k == k' = Leaf k (f v v')
+--   | otherwise = pairN4 k (Leaf k v) k' (Leaf k' v')
 
 -- | Combine two nodes into one, using the given function to resolve conflicts.
 mergeNodeWith :: (a -> a) -> Size -> Children a -> Size -> Children a -> Children a
