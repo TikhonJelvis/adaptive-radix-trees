@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns        #-}
+{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE MonadComprehensions #-}
 {-# LANGUAGE MultiWayIf          #-}
 
@@ -74,25 +75,27 @@ get48 (Node48 keys children) chunk = (children !~) <$> (keys !~ chunk)
 get256 :: Node256 a -> Chunk -> Maybe (ART a)
 get256 (Node256 children) chunk = children !~ chunk
 
--- | Does the given key start with the given prefix?
+findChild :: Chunk -> Children a -> Maybe (ART a)
+findChild chunk = \case
+  N4   nodes -> get4   nodes chunk
+  N16  nodes -> get16  nodes chunk
+  N48  nodes -> get48  nodes chunk
+  N256 nodes -> get256 nodes chunk
+
+-- | Does the given key start with the given prefix up to the given depth?
 checkPrefix :: Depth -> Prefix -> Key -> Bool
-checkPrefix depth prefix key = prefix' == Byte.take (Byte.length prefix') key
-  where prefix' = Byte.take depth prefix
+checkPrefix depth prefix key = Byte.take depth prefix == Byte.take depth key
 
-
+  -- TODO: Do we need depth in Node, or could we just use Byte.length prefix?
 lookup :: Key -> ART a -> Maybe a
-lookup key = go key 0
-  where go !_   depth Empty                    = Nothing
-        go !_   depth (Leaf k v)               = [v | key == k]
-        go !key depth (Node _ prefix _ children) =
-          case children of
-            N4   nodes -> get4   nodes chunk >>= withPrefix
-            N16  nodes -> get16  nodes chunk >>= withPrefix
-            N48  nodes -> get48  nodes chunk >>= withPrefix
-            N256 nodes -> get256 nodes chunk >>= withPrefix
-          where chunk = Byte.head key
-                withPrefix tree = guard (checkPrefix depth prefix key) >>
-                                  go (Byte.tail key) (depth + 1) tree
+lookup key = go key
+  where go _    Empty                          = Nothing
+        go _    (Leaf k v)                     = [v | key == k]
+        go !key (Node depth prefix _ children) =
+          findChild chunk children >>= withPrefix
+          where chunk = Byte.index key depth
+                withPrefix next = guard (checkPrefix depth prefix key) >>
+                                  go key next
 
 data S4 a b c d = S4 !a !b !c !d
 
