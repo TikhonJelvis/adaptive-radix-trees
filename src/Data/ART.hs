@@ -10,6 +10,7 @@ import           Control.Applicative ((<$>))
 import           Control.Monad       (guard, join)
 
 import qualified Data.ByteString     as Byte
+import           Data.Maybe          (fromMaybe)
 import qualified Data.List           as List
 import           Data.Vector         (Vector, (!))
 import qualified Data.Vector         as V
@@ -55,6 +56,7 @@ data ART a = Empty
            | Node !Depth !Prefix !Size !(Children a)
              deriving (Show, Eq)
 
+  -- TODO: Factor this logic out into a Data.ART.Children module?
 get4 :: Node4 a -> Chunk -> Maybe (ART a)
 get4 (Node4 chunks children) chunk = (children !) <$> V.findIndex (== chunk) chunks
 
@@ -75,12 +77,12 @@ get48 (Node48 keys children) chunk = (children !~) <$> (keys !~ chunk)
 get256 :: Node256 a -> Chunk -> Maybe (ART a)
 get256 (Node256 children) chunk = children !~ chunk
 
-findChild :: Children a -> Chunk -> Maybe (ART a)
-findChild = \case
-  N4   nodes -> get4   nodes
-  N16  nodes -> get16  nodes
-  N48  nodes -> get48  nodes
-  N256 nodes -> get256 nodes
+getChild :: Children a -> Chunk -> ART a
+getChild children chunk = fromMaybe Empty $ go children chunk
+  where go (N4   nodes) = get4   nodes
+        go (N16  nodes) = get16  nodes
+        go (N48  nodes) = get48  nodes
+        go (N256 nodes) = get256 nodes
 
 -- | Does the given key start with the given prefix up to the given depth?
 checkPrefix :: Depth -> Prefix -> Key -> Bool
@@ -92,7 +94,7 @@ lookup key = go key
   where go _    Empty                          = Nothing
         go _    (Leaf k v)                     = [v | key == k]
         go !key (Node depth prefix _ children) =
-          do next <- findChild children $ Byte.index key depth
+          do let next = getChild children $ Byte.index key depth
              guard (checkPrefix depth prefix key)
              go key next
 
@@ -117,11 +119,13 @@ pairN4 k1 v1 k2 v2 = Node depth prefix 2 (N4 children)
 --         k2 = Byte.pack ([1..6] ++ [14])
 --         result = Node 6 "\SOH\STX\ETX\EOT\ENQ\ACK" 2 (N4 (Node4 (fromList [10,14]) (fromList [Leaf "\SOH\STX\ETX\EOT\ENQ\ACK\n" "abc",Leaf "\SOH\STX\ETX\EOT\ENQ\ACK\SO" "abc"])))
 
--- insertWith :: (a -> a -> a) -> Key -> a -> ART a -> ART a
--- insertWith f k v Empty       = Leaf k v
--- insertWith f k v (Leaf k' v')
---   | k == k' = Leaf k (f v v')
---   | otherwise = pairN4 k (Leaf k v) k' (Leaf k' v')
+insertWith :: (a -> a -> a) -> Key -> a -> ART a -> ART a
+insertWith f k v Empty        = Leaf k v
+insertWith f k v (Leaf k' v')
+  | k == k'    = Leaf k (f v v')
+  | otherwise = pairN4 k (Leaf k v) k' (Leaf k' v')
+insertWith f k v (Node depth prefix size children)
+  | checkPrefix depth prefix k = undefined
 
 -- | Combine two nodes into one, using the given function to resolve conflicts.
 mergeNodeWith :: (a -> a) -> Size -> Children a -> Size -> Children a -> Children a
