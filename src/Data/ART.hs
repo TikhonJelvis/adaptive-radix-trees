@@ -75,12 +75,12 @@ get48 (Node48 keys children) chunk = (children !~) <$> (keys !~ chunk)
 get256 :: Node256 a -> Chunk -> Maybe (ART a)
 get256 (Node256 children) chunk = children !~ chunk
 
-findChild :: Chunk -> Children a -> Maybe (ART a)
-findChild chunk = \case
-  N4   nodes -> get4   nodes chunk
-  N16  nodes -> get16  nodes chunk
-  N48  nodes -> get48  nodes chunk
-  N256 nodes -> get256 nodes chunk
+findChild :: Children a -> Chunk -> Maybe (ART a)
+findChild = \case
+  N4   nodes -> get4   nodes
+  N16  nodes -> get16  nodes
+  N48  nodes -> get48  nodes
+  N256 nodes -> get256 nodes
 
 -- | Does the given key start with the given prefix up to the given depth?
 checkPrefix :: Depth -> Prefix -> Key -> Bool
@@ -92,10 +92,9 @@ lookup key = go key
   where go _    Empty                          = Nothing
         go _    (Leaf k v)                     = [v | key == k]
         go !key (Node depth prefix _ children) =
-          findChild chunk children >>= withPrefix
-          where chunk = Byte.index key depth
-                withPrefix next = guard (checkPrefix depth prefix key) >>
-                                  go key next
+          do next <- findChild children $ Byte.index key depth
+             guard (checkPrefix depth prefix key)
+             go key next
 
 sharedPrefix :: Key -> Key -> Prefix
 sharedPrefix !k1 !k2 = Byte.take (go 0) k1
@@ -105,11 +104,18 @@ sharedPrefix !k1 !k2 = Byte.take (go 0) k1
              | otherwise                               = n
 
 -- | Create a Node4 with the two given elements an everything else empty.
--- pairN4 :: Key -> ART a -> Key -> ART a -> ART a
--- pairN4 k1 v1 k2 v2 = Node depth prefix 2 (N4 children)
---   where S4 depth prefix k1' k2' = splitKeys k1 k2
---         (chunk1, chunk2) = (Byte.head k1', Byte.head k2')
---         children = Node4 (V.fromList [chunk1, chunk2]) (V.fromList [v1, v2])
+pairN4 :: Key -> ART a -> Key -> ART a -> ART a
+pairN4 k1 v1 k2 v2 = Node depth prefix 2 (N4 children)
+  where prefix = sharedPrefix k1 k2
+        depth = Byte.length prefix
+        (chunk1, chunk2) = (Byte.index k1 depth, Byte.index k2 depth)
+        children = Node4 (V.fromList [chunk1, chunk2]) (V.fromList [v1, v2])
+
+                   -- TODO: Organize tests!
+-- test_pairN4 = pairN4 k1 (Leaf k1 "abc") k2 (Leaf k2 "abc") == result
+--   where k1 = Byte.pack ([1..6] ++ [10])
+--         k2 = Byte.pack ([1..6] ++ [14])
+--         result = Node 6 "\SOH\STX\ETX\EOT\ENQ\ACK" 2 (N4 (Node4 (fromList [10,14]) (fromList [Leaf "\SOH\STX\ETX\EOT\ENQ\ACK\n" "abc",Leaf "\SOH\STX\ETX\EOT\ENQ\ACK\SO" "abc"])))
 
 -- insertWith :: (a -> a -> a) -> Key -> a -> ART a -> ART a
 -- insertWith f k v Empty       = Leaf k v
