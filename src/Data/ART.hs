@@ -6,18 +6,21 @@
 {-# OPTIONS_GHC -funbox-strict-fields #-}
 module Data.ART where
 
-import           Control.Applicative ((<$>))
-import           Control.Monad       (guard, join)
+import           Control.Applicative    ((<$>))
+import           Control.Monad          (guard, join)
 
-import qualified Data.ByteString     as Byte
-import           Data.Maybe          (fromMaybe)
-import qualified Data.List           as List
-import           Data.Vector         (Vector, (!))
-import qualified Data.Vector         as V
-import qualified Data.Vector.Unboxed as U
-import           Data.Word           (Word8)
+import qualified Data.ByteString        as Byte
+import qualified Data.List              as List
+import           Data.Maybe             (fromMaybe)
+import           Data.Vector            (Vector, (!))
+import qualified Data.Vector            as V
+import qualified Data.Vector.Unboxed    as U
+import           Data.Word              (Word8)
 
-import           Prelude             hiding (lookup)
+import           Prelude                hiding (lookup)
+
+import           Data.ART.Internal.SortingNetwork
+import           Data.ART.Internal.Vector
 
 type Key    = Byte.ByteString
 type Chunk  = Word8
@@ -61,15 +64,7 @@ get4 :: Node4 a -> Chunk -> Maybe (ART a)
 get4 (Node4 chunks children) chunk = (children !) <$> V.findIndex (== chunk) chunks
 
 get16 :: Node16 a -> Chunk -> Maybe (ART a)
-get16 (Node16 chunks children) chunk = (children !) <$> go 0 (V.length chunks)
-  where go !from !to =
-          let i = from + (to - from) `div` 2
-              k = chunks ! i
-          in
-          if | i + 1 == from || i == to -> Nothing
-             | k == chunk             -> Just i
-             | k < chunk             -> go (i + 1) to
-             | otherwise             -> go from i
+get16 (Node16 chunks children) chunk = (children !) <$> binarySearch chunk chunks
 
 get48 :: Node48 a -> Chunk -> Maybe (ART a)
 get48 (Node48 keys children) chunk = (children !~) <$> (keys !~ chunk)
@@ -83,6 +78,12 @@ getChild children chunk = fromMaybe Empty $ go children chunk
         go (N16  nodes) = get16  nodes
         go (N48  nodes) = get48  nodes
         go (N256 nodes) = get256 nodes
+
+  -- TODO: Optimization idea: copy to mutable array directly with
+  -- extra child, sort in place, unsafeFreeze.
+grow4 :: Chunk -> ART a -> Node4 a -> Node16 a
+grow4 chunk child (Node4 chunks children) =
+  Node16 (V.modify (sort5 compare) $ V.cons chunk chunks) (V.cons child children)
 
 -- | Does the given key start with the given prefix up to the given depth?
 checkPrefix :: Depth -> Prefix -> Key -> Bool
@@ -125,7 +126,8 @@ insertWith f k v (Leaf k' v')
   | k == k'    = Leaf k (f v v')
   | otherwise = pairN4 k (Leaf k v) k' (Leaf k' v')
 insertWith f k v (Node depth prefix size children)
-  | checkPrefix depth prefix k = undefined
+  | checkPrefix depth prefix k = Node depth prefix size newChildren
+  where newChildren = undefined
 
 -- | Combine two nodes into one, using the given function to resolve conflicts.
 mergeNodeWith :: (a -> a) -> Size -> Children a -> Size -> Children a -> Children a
