@@ -9,7 +9,6 @@ module Data.ART where
 import           Control.Applicative              ((<$>))
 import           Control.Monad                    (guard, join)
 
-import qualified Data.ByteString                  as Byte
 import qualified Data.List                        as List
 import           Data.Maybe                       (fromMaybe)
 import           Data.Vector                      (Vector, (!))
@@ -22,15 +21,11 @@ import           Prelude                          hiding (lookup)
 import           Data.ART.Internal.SortingNetwork
 import           Data.ART.Internal.Vector
 
-type Key    = Byte.ByteString
-type Chunk  = Word8
+import           Data.ART.Key                     (Chunk, Depth, Key, Prefix,
+                                                   (!~))
+import qualified Data.ART.Key                     as Key
 
-type Prefix = Byte.ByteString
-type Depth  = Int
 type Size   = Int
-
-(!~) :: Vector a -> Chunk -> a
-vector !~ key = vector ! (fromIntegral key)
 
              -- TODO: Figure out how to use unboxed vectors here!
 
@@ -85,33 +80,22 @@ grow4 :: Chunk -> ART a -> Node4 a -> Node16 a
 grow4 chunk child (Node4 chunks children) =
   Node16 (V.modify (sort5 compare) $ V.cons chunk chunks) (V.cons child children)
 
--- | Does the given key start with the given prefix up to the given depth?
-checkPrefix :: Depth -> Prefix -> Key -> Bool
-checkPrefix depth prefix key = Byte.take depth prefix == Byte.take depth key
-
   -- TODO: Do we need depth in Node, or could we just use Byte.length prefix?
 lookup :: Key -> ART a -> Maybe a
 lookup key = go key
   where go _    Empty                          = Nothing
         go _    (Leaf k v)                     = [v | key == k]
         go !key (Node depth prefix _ children) =
-          do let next = getChild children $ Byte.index key depth
-             guard (checkPrefix depth prefix key)
+          do let next = getChild children $ Key.getChunk key depth
+             guard (Key.checkPrefix depth prefix key)
              go key next
-
-sharedPrefix :: Key -> Key -> Prefix
-sharedPrefix !k1 !k2 = Byte.take (go 0) k1
-  where limit = min (Byte.length k1) (Byte.length k2)
-        go n | n == limit                               = n
-             | Byte.index k1 n == Byte.index k2 n       = go (n + 1)
-             | otherwise                               = n
 
 -- | Create a Node4 with the two given elements an everything else empty.
 pairN4 :: Key -> ART a -> Key -> ART a -> ART a
 pairN4 k1 v1 k2 v2 = Node depth prefix 2 (N4 children)
-  where prefix = sharedPrefix k1 k2
-        depth = Byte.length prefix
-        (chunk1, chunk2) = (Byte.index k1 depth, Byte.index k2 depth)
+  where prefix = Key.sharedPrefix k1 k2
+        depth = Key.length prefix
+        (chunk1, chunk2) = (Key.getChunk k1 depth, Key.getChunk k2 depth)
         children = Node4 (V.fromList [chunk1, chunk2]) (V.fromList [v1, v2])
 
                    -- TODO: Organize tests!
@@ -126,7 +110,7 @@ insertWith f k v (Leaf k' v')
   | k == k'    = Leaf k (f v v')
   | otherwise = pairN4 k (Leaf k v) k' (Leaf k' v')
 insertWith f k v (Node depth prefix size children)
-  | checkPrefix depth prefix k = Node depth prefix size newChildren
+  | Key.checkPrefix depth prefix k = Node depth prefix size newChildren
   where newChildren = undefined
 
 -- | Combine two nodes into one, using the given function to resolve conflicts.
