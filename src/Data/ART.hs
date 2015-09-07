@@ -6,18 +6,18 @@
 {-# OPTIONS_GHC -funbox-strict-fields #-}
 module Data.ART where
 
-import           Control.Applicative    ((<$>))
-import           Control.Monad          (guard, join)
+import           Control.Applicative              ((<$>))
+import           Control.Monad                    (guard, join)
 
-import qualified Data.ByteString        as Byte
-import qualified Data.List              as List
-import           Data.Maybe             (fromMaybe)
-import           Data.Vector            (Vector, (!))
-import qualified Data.Vector            as V
-import qualified Data.Vector.Unboxed    as U
-import           Data.Word              (Word8)
+import qualified Data.ByteString                  as Byte
+import qualified Data.List                        as List
+import           Data.Maybe                       (fromMaybe)
+import           Data.Vector                      (Vector, (!))
+import qualified Data.Vector                      as V
+import qualified Data.Vector.Unboxed              as U
+import           Data.Word                        (Word8)
 
-import           Prelude                hiding (lookup)
+import           Prelude                          hiding (lookup)
 
 import           Data.ART.Internal.SortingNetwork
 import           Data.ART.Internal.Vector
