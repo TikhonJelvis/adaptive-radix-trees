@@ -25,30 +25,6 @@ import           Data.ART.Key                     (Chunk, Depth, Key, Prefix,
                                                    (!~))
 import qualified Data.ART.Key                     as Key
 
-type Size   = Int
-
-             -- TODO: Figure out how to use unboxed vectors here!
-
--- | Stores 1–4 children as an array of up to 4 key/child pairs.
-data Node4 a = Node4 !(Vector Chunk) !(Vector (ART a)) deriving (Show, Eq)
-
--- | Stores 5–16 children as an array of up to 16 key/child pairs.
-data Node16 a = Node16 !(Vector Chunk) !(Vector (ART a)) deriving (Show, Eq)
-
--- | Stores 17–48 children as a chunk-indexed 256-element array of
--- keys into an array of 48 children.
-data Node48 a = Node48 !(Vector (Maybe Chunk)) !(Vector (ART a)) deriving (Show, Eq)
-
--- | Stores 49–256 children in a chunk-indexed array of 256 elements.
-newtype Node256 a = Node256 (Vector (Maybe (ART a))) deriving (Show, Eq)
-
-  -- TODO: Make this representation more efficient?
-data Children a = N4   !(Node4   a)
-                | N16  !(Node16  a)
-                | N48  !(Node48  a)
-                | N256 !(Node256 a)
-                  deriving (Show, Eq)
-
 data ART a = Empty
            | Leaf !Key a
            | Node !Depth !Prefix !Size !(Children a)
