@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns     #-}
 {-# LANGUAGE ParallelListComp #-}
 -- | The adaptive radix tree contains four different types of internal
 -- nodes, depending on how many children they store:
@@ -47,6 +48,13 @@ data Children a =
   | N256 !Size !(Vector (Maybe a))
     deriving (Show, Eq)
 
+-- | How many children the current node stores.
+size :: Children a -> Size
+size (N4   size _)   = size
+size (N16  size _)   = size
+size (N48  size _ _) = size
+size (N256 size _)   = size
+
 -- | Gets the element for the given byte if it exists. Returns
 --   'Nothing' otherwise.
 get :: Children a -> Chunk -> Maybe a
@@ -58,20 +66,35 @@ get (N256 _ children)      chunk =  children !~ chunk
 
   -- TODO: Change to insertWith
 insert :: Children a -> Chunk -> a -> Children a
-insert (N4 4 pairs) chunk value = 
+insert (N4 4 pairs) !chunk !value =
   N16 5 $ V.modify (sort5 (compare `on` fst)) $ V.cons (chunk, value) pairs
-insert (N4 n pairs) chunk value = N4 (n + 1) $ V.cons (chunk, value) pairs
+insert (N4 n pairs) !chunk !value = N4 (n + 1) $ V.cons (chunk, value) pairs
 
-insert (N16 16 pairs) chunk value = N48 17 keys (V.cons value $ V.map snd pairs)
+insert (N16 16 pairs) !chunk !value = N48 17 keys (V.cons value $ V.map snd pairs)
   where keys = V.replicate 256 Nothing // changes
-        changes = (fromIntegral chunk, Just 0) : 
+        changes = (fromIntegral chunk, Just 0) :
                   [(fromIntegral chunk, Just i) | chunk <- V.toList $ V.map fst pairs | i <- [1..16]]
-insert (N16 n pairs) chunk value = N16 (n + 1) $ AV.insert (chunk, value) pairs
+insert (N16 n pairs) !chunk !value = N16 (n + 1) $ AV.insert (chunk, value) pairs
 
-insert (N48 48 keys values) chunk value = N256 49 $ V.map update keys 
+insert (N48 48 keys values) !chunk !value = N256 49 $ V.map update keys
   where update key = (values !) . fromIntegral <$> key
-insert (N48 n keys values) chunk value = N48 (n + 1) keys' values'
+insert (N48 n keys values) !chunk !value = N48 (n + 1) keys' values'
   where keys'   = keys // [(fromIntegral chunk, Just $ fromIntegral n)]
         values' = V.snoc values value
 
-insert (N256 n values) chunk value = N256 (n + 1) $ values // [(fromIntegral chunk, Just value)]
+insert (N256 n values) !chunk !value = N256 (n + 1) $ values // [(fromIntegral chunk, Just value)]
+
+-- A utility function you probably shouldn't use in real code! (Yet?)
+fromList :: [(Chunk, a)] -> Children a
+fromList = foldr (\ (chunk, value) children -> insert children chunk value) (N4 0 V.empty)
+
+
+-- | Create a Node4 with the two given elements an everything else empty.
+pair :: Chunk -> a -> Chunk -> a -> Children a
+pair chunk1 v1 chunk2 v2 = N4 2 $ V.fromList [(chunk1, v1), (chunk2, v2)]
+
+                   -- TODO: Organize tests!
+-- test_pairN4 = pairN4 k1 (Leaf k1 "abc") k2 (Leaf k2 "abc") == result
+--   where k1 = Byte.pack ([1..6] ++ [10])
+--         k2 = Byte.pack ([1..6] ++ [14])
+--         result = Node 6 "\SOH\STX\ETX\EOT\ENQ\ACK" 2 (N4 (Node4 (fromList [10,14]) (fromList [Leaf "\SOH\STX\ETX\EOT\ENQ\ACK\n" "abc",Leaf "\SOH\STX\ETX\EOT\ENQ\ACK\SO" "abc"])))
