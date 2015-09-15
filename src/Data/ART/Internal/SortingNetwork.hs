@@ -43,15 +43,15 @@ sort4 cmp a = sort4ByOffset cmp a 0
 sort5ByIndex :: (MVector v a, PrimMonad m) => Compare a -> v (PrimState m) a -> 
                Int -> Int -> Int -> Int -> Int -> m ()
 sort5ByIndex cmp a i j k l m = 
-  do swap j k
-     swap l m
-     swap j l
-     swap i k
-     swap k m
-     swap i m
-     swap i j
+  do swap i j
      swap k l
+     swap j l
+     swap k m
+     swap i k
+     swap j m
      swap j k
+     swap l m
+     swap k l
   where swap = swapIf cmp a
 {-# INLINABLE sort5ByIndex #-}
 

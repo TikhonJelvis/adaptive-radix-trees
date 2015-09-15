@@ -19,7 +19,6 @@ import           Data.Word                        (Word8)
 import           Prelude                          hiding (lookup)
 
 import           Data.ART.Internal.SortingNetwork
-import           Data.ART.Internal.Vector
 
 import           Data.ART.Children                (Children, Size)
 import qualified Data.ART.Children                as Children
