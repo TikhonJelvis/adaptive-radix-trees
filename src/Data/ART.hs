@@ -44,16 +44,25 @@ lookup !key = go
              go next
 
 insertWith :: (a -> a -> a) -> Key -> a -> ART a -> ART a
-insertWith f k v Empty = Leaf k v
+insertWith _ k v Empty = Leaf k v
 insertWith f k v (Leaf k' v')
   | k == k'    = Leaf k (f v v')
-  | otherwise = Node depth prefix $ Children.pair c (Leaf k v) c' (Leaf k' v')
-  where (c, c') = (Key.getChunk k depth, Key.getChunk k' depth)
-        prefix  = Key.sharedPrefix k k'
+  | otherwise = combine k (Leaf k v) k' (Leaf k' v')
+insertWith f k v node@(Node depth prefix children)
+  | Key.checkPrefix depth prefix k = Node depth prefix $ Children.insert children chunk (Leaf k v)
+  | otherwise                      = combine k (Leaf k v) prefix node
+  where chunk = Key.getChunk k depth
+
+insert :: Key -> a -> ART a -> ART a
+insert = insertWith const
+
+-- | Combine two nodes with disjoint prefixes into a single tree by
+-- creating a new @N4@ for the pair of keys.
+combine :: Key -> ART a -> Key -> ART a -> ART a
+combine !k1 t1 !k2 t2 = Node depth prefix $ Children.pair c t1 c' t2
+  where (c, c') = (Key.getChunk k1 depth, Key.getChunk k2 depth)
+        prefix  = Key.sharedPrefix k1 k2
         depth   = Key.length prefix
-insertWith f k v (Node depth prefix children)
-  | Key.checkPrefix depth prefix k = Node depth prefix newChildren
-  where newChildren = undefined
 
 -- | Combine two nodes into one, using the given function to resolve conflicts.
 mergeNodeWith :: (a -> a) -> Size -> Children a -> Size -> Children a -> Children a
