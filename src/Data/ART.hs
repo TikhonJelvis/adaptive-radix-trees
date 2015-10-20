@@ -55,6 +55,10 @@ insertWith f k v node@(Node depth prefix children)
 insert :: Key -> a -> ART a -> ART a
 insert = insertWith const
 
+-- Convenience function for testing that you probably shouldn't use?
+fromList :: [(Key, a)] -> ART a
+fromList = foldr (uncurry insert) Empty
+
 -- | Combine two nodes with disjoint prefixes into a single tree by
 -- creating a new @N4@ for the pair of keys.
 combine :: Key -> ART a -> Key -> ART a -> ART a
