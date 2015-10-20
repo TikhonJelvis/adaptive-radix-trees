@@ -14,9 +14,9 @@ tests = [ QC.testProperty "prefixes equal" prop_prefixEqual
         , QC.testProperty "prefixes" prop_prefix
         ]
         
-newtype Pack = Pack Byte.ByteString
+newtype Pack = Pack { unpack :: Byte.ByteString }
 
-instance QC.Arbitrary Pack where arbitrary = Pack . Byte.pack <$> QC.arbitrary
+instance QC.Arbitrary Pack where arbitrary = Pack . Byte.pack <$> QC.listOf1 arbitrary
 
 instance Show Pack where show (Pack bs) = show bs
 

@@ -23,6 +23,7 @@ library
 
   exposed-modules:     Data.ART
                      , Data.ART.Key
+                     , Data.ART.Children
                      , Data.ART.Internal.SortingNetwork
                      , Data.ART.Internal.Vector
   -- other-modules:
@@ -42,7 +43,8 @@ test-suite test
 
   main-is:             test.hs
 
-  other-modules:       Test.Data.ART
+  exposed-modules:     Test.Data.ART
+                     , Test.Data.ART.Key
                      , Test.Data.ART.Internal.SortingNetwork
 
   build-depends:       adaptive-radix-trees,

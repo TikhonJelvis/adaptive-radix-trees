@@ -16,7 +16,7 @@ let
           base bytestring deepseq primitive vector vector-algorithms
         ];
         testHaskellDepends = [
-          base HUnit QuickCheck tasty tasty-quickcheck
+          base bytestring HUnit QuickCheck tasty tasty-quickcheck
         ];
         description = "Efficient integer maps based on adaptive radix trees";
         license = stdenv.lib.licenses.bsd3;
