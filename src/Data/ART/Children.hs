@@ -96,8 +96,11 @@ insertWith _ !chunk !value (N16 16 pairs) = N48 17 keys (V.cons value $ V.map sn
                   [(fromIntegral chunk, Just i) | chunk <- V.toList $ V.map fst pairs | i <- [1..16]]
 insertWith f !chunk !value (N16 n pairs) = N16 (n + 1) $ AV.insertWith f (chunk, value) pairs
 
-insertWith _ !chunk !value (N48 48 keys values) = N256 49 $ V.map update keys
-  where update key = (values !) . fromIntegral <$> key
+  -- TODO: The bug here was caused because chunks and the indicies
+  -- internal to an N48 have the same type. I should wrap one of them.
+insertWith _ !chunk !value (N48 48 keys values) = N256 49 $ V.imap update keys
+  where update i key | i == fromIntegral chunk = Just value
+                     | otherwise               = (values !) . fromIntegral <$> key
 insertWith _ !chunk !value (N48 n keys values) = N48 (n + 1) keys' values'
   where keys'   = keys // [(fromIntegral chunk, Just $ fromIntegral n)]
         values' = V.snoc values value
