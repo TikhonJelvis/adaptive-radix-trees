@@ -45,11 +45,12 @@ lookup !key = go
 insertWith :: (a -> a -> a) -> Key -> a -> ART a -> ART a
 insertWith _ k v Empty = Leaf k v
 insertWith f k v (Leaf k' v')
-  | k == k'    = Leaf k (f v v')
+  | k == k'   = Leaf k (f v v')
   | otherwise = combine k (Leaf k v) k' (Leaf k' v')
 insertWith f k v node@(Node depth prefix children)
-  | Key.checkPrefix depth prefix k = Node depth prefix $ Children.insert children chunk (Leaf k v)
-  | otherwise                      = combine k (Leaf k v) prefix node
+  | Key.checkPrefix depth prefix k =
+    Node depth prefix $ Children.insertWith (\ _ -> insertWith f k v) children chunk (Leaf k v)
+  | otherwise = combine k (Leaf k v) prefix node
   where chunk = Key.getChunk k depth
 
 insert :: Key -> a -> ART a -> ART a

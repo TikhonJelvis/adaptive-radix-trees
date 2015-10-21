@@ -32,6 +32,8 @@ import           Data.ART.Key                     (Chunk, (!~))
 import           Data.ART.Internal.SortingNetwork (sort5)
 import qualified Data.ART.Internal.Vector         as AV
 
+  -- TODO: Make the order of arguments in this API consistent!
+
 type Size = Int
 
              -- TODO: Figure out how to use unboxed vectors here!
@@ -64,25 +66,46 @@ get (N48  _ keys children) chunk = (children !~) <$> (keys !~ chunk)
 get (N256 _ children)      chunk =  children !~ chunk
 {-# INLINE get #-}
 
-  -- TODO: Change to insertWith
-insert :: Children a -> Chunk -> a -> Children a
-insert (N4 4 pairs) !chunk !value =
-  N16 5 $ V.modify (sort5 (compare `on` fst)) $ V.cons (chunk, value) pairs
-insert (N4 n pairs) !chunk !value = N4 (n + 1) $ V.cons (chunk, value) pairs
+-- | Given that the given key already has a value, update that value
+-- with given function. If the value is not in the node, the node is
+-- returned unchanged.
+update :: (a -> a) -> Chunk -> Children a -> Children a
+update f chunk (N4 n pairs) = N4 n $ V.map guardedUpdate pairs
+  where guardedUpdate (k, old) = if k == chunk then (k, f old) else (k, old)
+update f chunk (N16 n pairs) = N16 n $ V.map guardedUpdate pairs
+  where guardedUpdate (k, old) = if k == chunk then (k, f old) else (k, old)
+update f chunk (N48 n keys children) = N48 n keys new
+  where new | Just n <- keys !~ chunk = children // [(fromIntegral n, f $ children !~ n)]
+            | otherwise               = children
+update f chunk (N256 n children) = N256 n new
+  where new | Just old <- children !~ chunk = children // [(k, Just $ f old)]
+            | otherwise                     = children
+        k = fromIntegral chunk
 
-insert (N16 16 pairs) !chunk !value = N48 17 keys (V.cons value $ V.map snd pairs)
+  -- TODO: Change to insertWith
+insertWith :: (a -> a -> a) -> Children a -> Chunk -> a -> Children a
+insertWith f children !chunk !value
+  | Just _ <- get children chunk = update (f value) chunk children
+insertWith _ (N4 4 pairs) !chunk !value =
+  N16 5 $ V.modify (sort5 (compare `on` fst)) $ V.cons (chunk, value) pairs
+insertWith _ (N4 n pairs) !chunk !value = N4 (n + 1) $ V.cons (chunk, value) pairs
+
+insertWith _ (N16 16 pairs) !chunk !value = N48 17 keys (V.cons value $ V.map snd pairs)
   where keys = V.replicate 256 Nothing // changes
         changes = (fromIntegral chunk, Just 0) :
                   [(fromIntegral chunk, Just i) | chunk <- V.toList $ V.map fst pairs | i <- [1..16]]
-insert (N16 n pairs) !chunk !value = N16 (n + 1) $ AV.insert (chunk, value) pairs
+insertWith f (N16 n pairs) !chunk !value = N16 (n + 1) $ AV.insertWith f (chunk, value) pairs
 
-insert (N48 48 keys values) !chunk !value = N256 49 $ V.map update keys
+insertWith _ (N48 48 keys values) !chunk !value = N256 49 $ V.map update keys
   where update key = (values !) . fromIntegral <$> key
-insert (N48 n keys values) !chunk !value = N48 (n + 1) keys' values'
+insertWith _ (N48 n keys values) !chunk !value = N48 (n + 1) keys' values'
   where keys'   = keys // [(fromIntegral chunk, Just $ fromIntegral n)]
         values' = V.snoc values value
 
-insert (N256 n values) !chunk !value = N256 (n + 1) $ values // [(fromIntegral chunk, Just value)]
+insertWith f (N256 n values) !chunk !value = N256 (n + 1) $ values // [(fromIntegral chunk, Just value)]
+
+insert :: Children a -> Chunk -> a -> Children a
+insert = insertWith const
 
 -- A utility function you probably shouldn't use in real code! (Yet?)
 fromList :: [(Chunk, a)] -> Children a

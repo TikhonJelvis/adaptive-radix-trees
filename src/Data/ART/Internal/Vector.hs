@@ -4,7 +4,7 @@
 
 module Data.ART.Internal.Vector where
 
-import           Data.Vector                 (Vector, (!))
+import           Data.Vector                 (Vector, (!), (//))
 import qualified Data.Vector                 as V
 import           Data.Vector.Generic.Mutable (MVector)
 import qualified Data.Vector.Generic.Mutable as MV
@@ -19,12 +19,19 @@ binarySearch needle haystack = go 0 (V.length haystack)
               (k, v) = haystack ! i
           in
           if | i + 1 == from || i == to -> Nothing
-             | k == needle            -> Just (k, v)
-             | k < needle            -> go (i + 1) to
-             | otherwise             -> go from i
+             | k == needle              -> Just (k, v)
+             | k < needle               -> go (i + 1) to
+             | otherwise                -> go from i
 {-# INLINE binarySearch #-}
 
   -- TODO: Optimize?
-insert :: Ord a => (a, b) -> Vector (a, b) -> Vector (a, b)
-insert (k, v) vector = V.concat [before, V.singleton (k, v), after]
+-- | Insert a key-value pair into a vector sorted by keys. If the
+-- given key already exists, combine the old value and the new value
+-- with the given function.
+insertWith :: Ord a => (b -> b -> b) -> (a, b) -> Vector (a, b) -> Vector (a, b)
+insertWith f (k, v) vector
+  | length after > 0 && fst (V.head after) == k =
+    V.concat [before, V.singleton (k, f v . snd $ V.head after), V.tail after]
+  | otherwise =
+    V.concat [before, V.singleton (k, v), after]
   where (before, after) = V.span (\ (k', _) -> k' < k) vector
