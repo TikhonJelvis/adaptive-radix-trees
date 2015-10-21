@@ -1,4 +1,6 @@
 {-# LANGUAGE BangPatterns     #-}
+{-# LANGUAGE DeriveAnyClass   #-}
+{-# LANGUAGE DeriveGeneric    #-}
 {-# LANGUAGE ParallelListComp #-}
 -- | The adaptive radix tree contains four different types of internal
 -- nodes, depending on how many children they store:
@@ -21,11 +23,14 @@
 module Data.ART.Children where
 
 import           Control.Applicative              ((<$>))
+import           Control.DeepSeq                  (NFData (..))
 import           Control.Monad                    (guard, join)
 
 import           Data.Function                    (on)
 import           Data.Vector                      (Vector, (!), (//))
 import qualified Data.Vector                      as V
+
+import           GHC.Generics                     (Generic)
 
 import           Data.ART.Key                     (Chunk, (!~))
 
@@ -48,7 +53,7 @@ data Children a =
   | N48  !Size !(Vector (Maybe Chunk)) !(Vector a)
     -- | Stores 49–256 children in a chunk-indexed array of 256 elements.
   | N256 !Size !(Vector (Maybe a))
-    deriving (Show, Eq)
+    deriving (Show, Eq, Generic, NFData)
 
 -- | How many children the current node stores.
 size :: Children a -> Size

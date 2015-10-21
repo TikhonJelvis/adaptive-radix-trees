@@ -47,12 +47,26 @@ test-suite test
                      , Test.Data.ART.Key
                      , Test.Data.ART.Internal.SortingNetwork
 
-  build-depends:       adaptive-radix-trees,
+  build-depends:       adaptive-radix-trees
+                     , base
+                     , bytestring
+                     , tasty
+                     , tasty-quickcheck
+                     , HUnit
+                     , QuickCheck
 
-                       base,
-                       bytestring,
+benchmark benchmarks
+  type:                exitcode-stdio-1.0
+  default-language:    Haskell2010
 
-                       tasty,
-                       tasty-quickcheck,
-                       HUnit,
-                       QuickCheck
+  hs-source-dirs:      bench
+  main-is:             bench.hs
+  ghc-options:         -O2
+
+  build-depends:       base
+                     , adaptive-radix-trees
+                     , deepseq
+                     , bytestring
+                     , containers
+                     , binary
+                     , criterion

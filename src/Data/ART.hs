@@ -1,4 +1,6 @@
 {-# LANGUAGE BangPatterns        #-}
+{-# LANGUAGE DeriveAnyClass      #-}
+{-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE MonadComprehensions #-}
 {-# LANGUAGE MultiWayIf          #-}
@@ -7,6 +9,7 @@
 module Data.ART where
 
 import           Control.Applicative              ((<$>))
+import           Control.DeepSeq                  (NFData (..))
 import           Control.Monad                    (guard, join)
 
 import qualified Data.List                        as List
@@ -15,6 +18,8 @@ import           Data.Vector                      (Vector, (!))
 import qualified Data.Vector                      as V
 import qualified Data.Vector.Unboxed              as U
 import           Data.Word                        (Word8)
+
+import           GHC.Generics                     (Generic)
 
 import           Prelude                          hiding (lookup)
 
@@ -29,7 +34,7 @@ import qualified Data.ART.Key                     as Key
 data ART a = Empty
            | Leaf !Key a
            | Node !Depth !Prefix !(Children (ART a))
-           deriving (Show, Eq)
+           deriving (Show, Eq, Generic, NFData)
 
   -- TODO: Do we need depth in Node, or could we just use Byte.length prefix?
 -- | Get the value associated with the given key, if any.
