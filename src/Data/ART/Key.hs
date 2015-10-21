@@ -33,7 +33,7 @@ sharedPrefix !k1 !k2 = Bytes.take (go 0) k1
   where limit = min (Bytes.length k1) (Bytes.length k2)
         go n | n == limit                           = n
              | Bytes.index k1 n == Bytes.index k2 n = go (n + 1)
-             | otherwise                           = n
+             | otherwise                            = n
 
 -- | The length of the prefix in bytes.
 length :: Prefix -> Int

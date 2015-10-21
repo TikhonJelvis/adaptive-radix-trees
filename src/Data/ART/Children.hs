@@ -83,33 +83,33 @@ update f chunk (N256 n children) = N256 n new
         k = fromIntegral chunk
 
   -- TODO: Change to insertWith
-insertWith :: (a -> a -> a) -> Children a -> Chunk -> a -> Children a
-insertWith f children !chunk !value
+insertWith :: (a -> a -> a) -> Chunk -> a -> Children a -> Children a
+insertWith f !chunk !value children
   | Just _ <- get children chunk = update (f value) chunk children
-insertWith _ (N4 4 pairs) !chunk !value =
+insertWith _ !chunk !value (N4 4 pairs) =
   N16 5 $ V.modify (sort5 (compare `on` fst)) $ V.cons (chunk, value) pairs
-insertWith _ (N4 n pairs) !chunk !value = N4 (n + 1) $ V.cons (chunk, value) pairs
+insertWith _ !chunk !value (N4 n pairs) = N4 (n + 1) $ V.cons (chunk, value) pairs
 
-insertWith _ (N16 16 pairs) !chunk !value = N48 17 keys (V.cons value $ V.map snd pairs)
+insertWith _ !chunk !value (N16 16 pairs) = N48 17 keys (V.cons value $ V.map snd pairs)
   where keys = V.replicate 256 Nothing // changes
         changes = (fromIntegral chunk, Just 0) :
                   [(fromIntegral chunk, Just i) | chunk <- V.toList $ V.map fst pairs | i <- [1..16]]
-insertWith f (N16 n pairs) !chunk !value = N16 (n + 1) $ AV.insertWith f (chunk, value) pairs
+insertWith f !chunk !value (N16 n pairs) = N16 (n + 1) $ AV.insertWith f (chunk, value) pairs
 
-insertWith _ (N48 48 keys values) !chunk !value = N256 49 $ V.map update keys
+insertWith _ !chunk !value (N48 48 keys values) = N256 49 $ V.map update keys
   where update key = (values !) . fromIntegral <$> key
-insertWith _ (N48 n keys values) !chunk !value = N48 (n + 1) keys' values'
+insertWith _ !chunk !value (N48 n keys values) = N48 (n + 1) keys' values'
   where keys'   = keys // [(fromIntegral chunk, Just $ fromIntegral n)]
         values' = V.snoc values value
 
-insertWith f (N256 n values) !chunk !value = N256 (n + 1) $ values // [(fromIntegral chunk, Just value)]
+insertWith f !chunk !value (N256 n values) = N256 (n + 1) $ values // [(fromIntegral chunk, Just value)]
 
-insert :: Children a -> Chunk -> a -> Children a
+insert :: Chunk -> a -> Children a -> Children a
 insert = insertWith const
 
 -- A utility function you probably shouldn't use in real code! (Yet?)
 fromList :: [(Chunk, a)] -> Children a
-fromList = foldr (\ (chunk, value) children -> insert children chunk value) (N4 0 V.empty)
+fromList = foldr (\ (chunk, value) children -> insert chunk value children) (N4 0 V.empty)
 
 
 -- | Create a Node4 with the two given elements an everything else empty.

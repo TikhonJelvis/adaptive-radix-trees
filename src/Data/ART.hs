@@ -49,9 +49,10 @@ insertWith f k v (Leaf k' v')
   | otherwise = combine k (Leaf k v) k' (Leaf k' v')
 insertWith f k v node@(Node depth prefix children)
   | Key.checkPrefix depth prefix k =
-    Node depth prefix $ Children.insertWith (\ _ -> insertWith f k v) children chunk (Leaf k v)
+    Node depth prefix $ Children.insertWith (mergeWith f) chunk (Leaf k v) children
   | otherwise = combine k (Leaf k v) prefix node
   where chunk = Key.getChunk k depth
+        mergeWith f _ = insertWith f k v
 
 insert :: Key -> a -> ART a -> ART a
 insert = insertWith const
