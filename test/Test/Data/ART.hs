@@ -24,7 +24,7 @@ prop_setGetRandom (Pack key) = forAll (listOf arbitrary) $ \ ls ->
   let tree = ART.fromList . zip (map unpack ls) $ repeat "def" in
   ART.lookup key (ART.insert key "abc" tree) == Just "abc"
 
--- | Insert "abc" into a tree with 10000 random keys and get it back out.
-prop_setGetBig (Pack key) = forAll (replicateM 10000 arbitrary) $ \ ls ->
+-- | Insert "abc" into a tree with 1000000 random keys and get it back out.
+prop_setGetBig (Pack key) = forAll (replicateM 1000000 arbitrary) $ \ ls ->
   let tree = ART.fromList . zip (map unpack ls) $ repeat "def" in
   ART.lookup key (ART.insert key "abc" tree) == Just "abc"
