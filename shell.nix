@@ -4,8 +4,8 @@ let
 
   inherit (nixpkgs) pkgs;
 
-  f = { mkDerivation, base, bytestring, binary, containers, criterion, deepseq, HUnit, primitive
-      , QuickCheck, stdenv, tasty, tasty-quickcheck, vector
+  f = { mkDerivation, base, bytestring, array, binary, containers, criterion, deepseq
+      , HUnit, primitive , QuickCheck, stdenv, tasty, tasty-quickcheck, vector
       , vector-algorithms
       }:
       mkDerivation {
@@ -13,7 +13,7 @@ let
         version = "0.1.0.0";
         src = ./.;
         libraryHaskellDepends = [
-          base bytestring binary containers criterion deepseq primitive vector vector-algorithms
+          array base bytestring binary containers criterion deepseq primitive vector vector-algorithms
         ];
         testHaskellDepends = [
           base bytestring HUnit QuickCheck tasty tasty-quickcheck

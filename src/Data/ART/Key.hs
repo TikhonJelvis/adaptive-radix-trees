@@ -15,12 +15,6 @@ type Chunk = Word8
 type Prefix = Bytes.ByteString
 type Depth  = Int
 
-              -- TODO: Switch to unsafeIndex?
--- | Indexes into a vector with a byte, expanding it into a full
---   'Int'. Currently does bounds checking, but might not in the future.
-(!~) :: Vector a -> Chunk -> a
-vector !~ key = vector ! (fromIntegral key)
-
 -- | Checks whether the first @depth@ bytes of the key match the first
 --   @depth@ bytes of the prefix.
 checkPrefix :: Depth -> Prefix -> Key -> Bool

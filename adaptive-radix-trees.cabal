@@ -25,11 +25,12 @@ library
                      , Data.ART.Key
                      , Data.ART.Children
                      , Data.ART.Internal.SortingNetwork
-                     , Data.ART.Internal.Vector
+                     , Data.ART.Internal.Array
   -- other-modules:
   -- other-extensions:
   build-depends:       base
                      , bytestring
+                     , array
                      , deepseq
                      , primitive
                      , vector
