@@ -24,8 +24,8 @@ library
   exposed-modules:     Data.ART
                      , Data.ART.Key
                      , Data.ART.Children
-                     , Data.ART.Internal.SortingNetwork
                      , Data.ART.Internal.Array
+                     , Data.ART.Internal.SortingNetwork
   -- other-modules:
   -- other-extensions:
   build-depends:       base
@@ -46,6 +46,7 @@ test-suite test
 
   exposed-modules:     Test.Data.ART
                      , Test.Data.ART.Key
+                     , Test.Data.ART.Internal.Array
                      , Test.Data.ART.Internal.SortingNetwork
 
   build-depends:       adaptive-radix-trees
