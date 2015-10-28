@@ -4,10 +4,7 @@
 module Data.ART.Key where
 
 import qualified Data.ByteString as Bytes
-import           Data.Vector     (Vector, (!))
 import           Data.Word       (Word8)
-
-import           Prelude         hiding (Length)
 
 type Key   = Bytes.ByteString
 type Chunk = Word8

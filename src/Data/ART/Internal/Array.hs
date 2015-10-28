@@ -10,10 +10,11 @@ module Data.ART.Internal.Array where
 import           Control.Monad               (when)
 import           Control.Monad.ST            (runST, ST)
 
-import           Data.Array.IArray           (Array, (!))
+import           Data.Array.IArray           (Array, IArray, (!))
 import qualified Data.Array.IArray           as Array
+import           Data.Array.MArray           (MArray)
 import qualified Data.Array.MArray           as MArray
-import           Data.Array.ST               (STArray, STUArray)
+import           Data.Array.ST               (STArray, STUArray, runSTArray, runSTUArray)
 import           Data.Array.Unsafe           (unsafeFreeze)
 import           Data.Array.Unboxed          (UArray)
 
@@ -34,6 +35,9 @@ findIndex target arr = go 0
         go !n | n <= size = if arr ! n == target then Just n else go (n + 1)
               | otherwise = Nothing
 
+empty :: (IArray a e) => a Word8 e
+empty = Array.array (0, 0) []
+
 -- | Given a sorted array, returns the index containing the given element, if
 -- any. With multiple equal elements, the index returned is
 -- unspecified.
@@ -46,7 +50,43 @@ binarySearch target arr = go 0 $ snd (Array.bounds arr) + 1
              | arr ! i < target         -> go (i + 1) to
              | otherwise                -> go from i
 
+
+
           -- TODO: Man, this code is ugly!
+
+consKeys :: Key -> Keys -> Keys
+consKeys x arr = runSTUArray $ do
+  arr' <- MArray.newArray (0, size) 0
+  MArray.writeArray arr' 0 x
+  go arr' 0
+  return arr'
+    where size = snd (Array.bounds arr) + 1
+          go arr' n = when (n < size) $ do
+            MArray.writeArray arr' (n + 1) (arr ! n)
+            go arr' (n + 1)
+
+consValues :: a -> Values a -> Values a
+consValues x arr = runSTArray $ do
+  arr' <- MArray.newArray (0, size) undefined
+  MArray.writeArray arr' 0 x
+  go arr' 0
+  return arr'
+    where size = snd (Array.bounds arr) + 1
+          go arr' n = when (n < size) $ do
+            MArray.writeArray arr' (n + 1) (arr ! n)
+            go arr' (n + 1)
+
+snocValues :: Values a -> a -> Values a
+snocValues arr x = runSTArray $ do
+  arr' <- MArray.newArray (0, size) undefined
+  go arr' 0
+  MArray.writeArray arr' size x
+  return arr'
+    where size = snd (Array.bounds arr) + 1
+          go arr' n = when (n < size) $ do
+            MArray.writeArray arr' n (arr ! n)
+            go arr' (n + 1)
+
 -- | Given a key, a value, a sorted array of keys and an array of
 -- values, inserts the key into the sorted array and inserts the value
 -- into the corresponding index of the value array. *Should* only copy
@@ -85,3 +125,30 @@ insert key value keys values = runST newArrays
                       write n key value
                       go' True $ n
                 write n k v = MArray.writeArray newKeys n k >> MArray.writeArray newValues n v
+
+-- | Takes an array of keys and a new key to add and produces a
+-- 256-element byte-indexed array suitable for a Node48. Any unused
+-- spaces are initialized to -1, the sentinel value I use for empty
+-- cells in a Node48.
+expandToByte :: Key -> Keys -> Keys
+expandToByte newKey keys = runSTUArray $ do
+  keys' <- MArray.newArray (0, 255) (-1)
+  MArray.writeArray keys' newKey 0
+  go keys' 0 -- copy over original keys array
+  return keys'
+  where (_, size) = Array.bounds keys
+        go arr n = when (n <= size) $ do
+          MArray.writeArray arr (keys ! n) (n + 1)
+          go arr $ n + 1
+
+-- | Takes an unboxed byte array of keys and boxed array of values and
+-- produces a boxed 256-element array of Maybe values.
+expandKeysToValues :: Keys -> Values a -> Values (Maybe a)
+expandKeysToValues keys values = runSTArray $ do
+  values' <- MArray.newArray (0, 255) Nothing
+  go values' 0
+  return values'
+  where (_, size) = Array.bounds keys
+        go arr n = when (n <= size) $ do
+          MArray.writeArray arr (keys ! n) (Just $! values ! n)
+          go arr (n + 1)

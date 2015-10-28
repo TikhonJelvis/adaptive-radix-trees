@@ -27,8 +27,7 @@ import           Data.ART.Internal.SortingNetwork
 
 import           Data.ART.Children                (Children, Size)
 import qualified Data.ART.Children                as Children
-import           Data.ART.Key                     (Chunk, Depth, Key, Prefix,
-                                                   (!~))
+import           Data.ART.Key                     (Chunk, Depth, Key, Prefix)
 import qualified Data.ART.Key                     as Key
 
 data ART a = Empty
