@@ -27,6 +27,7 @@ prop_findIndex (NonEmptyList keys) = forAll $ choose (0, length keys - 1) $ \ i 
 prop_findIndexMissing key keys = findIndex key filtered == Nothing
   where filtered = fromList $ filter (/= key) keys
 
+-- I couldn't find a convenient way to combine OrderedList and NonEmptyList
 prop_binarySearch (OrderedList []) = forAll $ choose (0, 100) $ \ k ->
   binarySearch k (fromList []) == Nothing
 prop_binarySearch (OrderedList keys) = forAll $ choose (0, length keys - 1) $ \ i ->
