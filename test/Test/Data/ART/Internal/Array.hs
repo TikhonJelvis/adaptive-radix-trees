@@ -3,6 +3,7 @@ module Test.Data.ART.Internal.Array where
 
 import           Data.ART.Internal.Array
 
+import           Data.Function           (on)
 import qualified Data.List               as List
 import           Data.Maybe              (isJust)
 
@@ -20,7 +21,10 @@ tests = [ QC.testProperty "findIndex" prop_findIndex
         , QC.testProperty "binarySearch missing" prop_binarySearchMissing
         , QC.testProperty "insert" prop_insert
         , QC.testProperty "consValues" prop_consValues
+        , QC.testProperty "snocValues" prop_snocValues
         , QC.testProperty "consKeys" prop_consKeys
+        , QC.testProperty "expandToByteKeyArray" prop_expandToByteKeyArray
+        , QC.testProperty "expandKeysToValues" prop_expandKeysToValues
         ]
 
 fromList :: (IArray a e) => [e] -> a Key e
@@ -63,6 +67,30 @@ prop_consValues (value :: Int) values =
 prop_consKeys (key :: Key) keys =
   (key : keys) == Array.elems (consKeys key keysArray)
   where keysArray = Array.listArray (0, List.genericLength keys - 1) keys
+
+prop_snocValues (value :: Int) values =
+  (values ++ [value]) == Array.elems (snocValues valuesArray value)
+  where valuesArray = Array.listArray (0, List.genericLength values - 1) values
+
+prop_expandToByteKeyArray (NonEmpty keys') =
+  forAll (arbitrary `suchThat` (`notElem` keys')) $ \ (newKey :: Key) ->
+  let keys = take 48 . List.nub $ filter (/= newKey) keys'
+      keysArray = Array.listArray (0, List.genericLength keys - 1) keys
+      expanded = expandToByteKeyArray newKey keysArray
+  in
+  and [ Array.bounds expanded == (0, 255)
+      , all (\ k -> expanded ! k >= 0) keys'
+      ]
+
+prop_expandKeysToValues (NonEmpty (kvPairs' :: [(Key, Int)])) =
+  and [ Array.bounds expanded == (0, 255)
+      , all (\ (k, v) -> expanded ! k == Just v) kvPairs
+      ]
+  where kvPairs = List.nubBy ((==) `on` fst) kvPairs'
+        size = List.genericLength kvPairs - 1
+        keys = Array.listArray (0, size) $ map fst kvPairs
+        values = Array.listArray (0, size) $ map snd kvPairs
+        expanded = expandKeysToValues keys values
 
 isOrdered []       = True
 isOrdered [x]      = True

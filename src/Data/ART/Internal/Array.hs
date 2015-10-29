@@ -28,7 +28,7 @@ type STKeys s = STUArray s Key Key
 type STValues s a = STArray s Key a
 
 empty :: (IArray a e) => a Word8 e
-empty = Array.array (0, 0) []
+empty = Array.array (1, 0) []
 
 isEmpty :: (IArray a e) => a Word8 e -> Bool
 isEmpty arr = let (a, b) = Array.bounds arr in a > b
@@ -60,6 +60,7 @@ binarySearch target arr = go 0 $ snd (Array.bounds arr) + 1
           -- TODO: Man, this code is ugly!
 
 consKeys :: Key -> Keys -> Keys
+consKeys x arr | isEmpty arr = Array.listArray (0, 0) [x]
 consKeys x arr = runSTUArray $ do
   arr' <- MArray.newArray (0, size) 0
   MArray.writeArray arr' 0 x
@@ -71,6 +72,7 @@ consKeys x arr = runSTUArray $ do
             go arr' (n + 1)
 
 consValues :: a -> Values a -> Values a
+consValues x arr | isEmpty arr = Array.listArray (0, 0) [x]
 consValues x arr = runSTArray $ do
   arr' <- MArray.newArray (0, size) undefined
   MArray.writeArray arr' 0 x
@@ -82,6 +84,7 @@ consValues x arr = runSTArray $ do
             go arr' (n + 1)
 
 snocValues :: Values a -> a -> Values a
+snocValues arr x | isEmpty arr = Array.listArray (0, 0) [x]
 snocValues arr x = runSTArray $ do
   arr' <- MArray.newArray (0, size) undefined
   go arr' 0
@@ -137,8 +140,8 @@ insert key value keys values = runST newArrays
 -- 256-element byte-indexed array suitable for a Node48. Any unused
 -- spaces are initialized to -1, the sentinel value I use for empty
 -- cells in a Node48.
-expandToByte :: Key -> Keys -> Keys
-expandToByte newKey keys = runSTUArray $ do
+expandToByteKeyArray :: Key -> Keys -> Keys
+expandToByteKeyArray newKey keys = runSTUArray $ do
   keys' <- MArray.newArray (0, 255) (-1)
   MArray.writeArray keys' newKey 0
   go keys' 0 -- copy over original keys array

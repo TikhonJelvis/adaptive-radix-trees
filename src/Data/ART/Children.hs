@@ -82,7 +82,7 @@ get (N4 size keys values)  chunk = (values !) <$> Array.findIndex chunk keys
 get (N16 size keys values) chunk = (values !) <$> Array.binarySearch chunk keys
 get (N48  _ keys children) chunk =
   case keys ! chunk of
-    i | i < 0     -> Nothing
+    i | i >= 48   -> Nothing
       | otherwise -> Just $! children ! i
 get (N256 _ children) chunk = children ! chunk
 {-# INLINE get #-}
@@ -119,7 +119,7 @@ insertWith _ !chunk !value (N4 n keys values) = N4 (n + 1) keys' values'
   where (keys', values') = (Array.consKeys chunk keys, Array.consValues value values)
 
 insertWith _ !chunk !value (N16 16 keys values) = N48 17 keys' values'
-  where keys'   = Array.expandToByte chunk keys
+  where keys'   = Array.expandToByteKeyArray chunk keys
         values' = Array.consValues value values
 insertWith _ !chunk !value (N16 n keys values) = N16 (n + 1) keys' values'
   where (keys', values') = Array.insert chunk value keys values
@@ -140,7 +140,7 @@ insert = insertWith const
 
 -- A utility function you probably shouldn't use in real code! (Yet?)
 fromList :: [(Chunk, a)] -> Children a
-fromList = foldr (uncurry insert) (N4 0 Array.empty Array.empty)
+fromList = foldr (uncurry insert) (N4 0 Array.empty Array.empty) . reverse
 
 
 -- | Create a Node4 with the two given elements an everything else empty.

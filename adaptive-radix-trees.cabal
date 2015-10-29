@@ -44,7 +44,8 @@ test-suite test
 
   main-is:             test.hs
 
-  exposed-modules:     Test.Data.ART
+  other-modules:       Test.Data.ART
+                     , Test.Data.ART.Children
                      , Test.Data.ART.Key
                      , Test.Data.ART.Internal.Array
                      , Test.Data.ART.Internal.SortingNetwork
