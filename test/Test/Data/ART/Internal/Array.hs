@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module Test.Data.ART.Internal.Array where
 
 import           Data.ART.Internal.Array
@@ -18,6 +19,8 @@ tests = [ QC.testProperty "findIndex" prop_findIndex
         , QC.testProperty "binarySearch" prop_binarySearch
         , QC.testProperty "binarySearch missing" prop_binarySearchMissing
         , QC.testProperty "insert" prop_insert
+        , QC.testProperty "consValues" prop_consValues
+        , QC.testProperty "consKeys" prop_consKeys
         ]
 
 fromList :: (IArray a e) => [e] -> a Key e
@@ -52,6 +55,14 @@ prop_insert key (Ordered keys) value =
                        ]
       ]
   where (newKeys, newValues) = insert key value (fromList keys) (fromList keys)
+
+prop_consValues (value :: Int) values =
+  (value : values) == Array.elems (consValues value valuesArray)
+  where valuesArray = Array.listArray (0, List.genericLength values - 1) values
+
+prop_consKeys (key :: Key) keys =
+  (key : keys) == Array.elems (consKeys key keysArray)
+  where keysArray = Array.listArray (0, List.genericLength keys - 1) keys
 
 isOrdered []       = True
 isOrdered [x]      = True
