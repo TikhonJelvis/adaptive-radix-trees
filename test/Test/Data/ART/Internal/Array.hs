@@ -1,12 +1,11 @@
-module Test.Data.Internal.Array where
+module Test.Data.ART.Internal.Array where
 
 import           Data.ART.Internal.Array
 
-import           Data.Foldable           (fromList, toList)
 import qualified Data.List               as List
 import           Data.Maybe              (isJust)
 
-import           Data.Array.IArray       (Array)
+import           Data.Array.IArray       (Array, IArray, (!))
 import qualified Data.Array.IArray       as Array
 
 import           Test.QuickCheck
@@ -21,29 +20,38 @@ tests = [ QC.testProperty "findIndex" prop_findIndex
         , QC.testProperty "insert" prop_insert
         ]
 
-prop_findIndex (NonEmptyList keys) = forAll $ choose (0, length keys - 1) $ \ i ->
-  findIndex (keys !! i) (fromList keys) == Just i
+fromList :: (IArray a e) => [e] -> a Key e
+fromList [] = Array.listArray (1, 0) []
+fromList ls = Array.listArray (0, List.genericLength ls - 1) ls
+
+prop_findIndex (NonEmpty keys') =
+  let keys = List.nub keys' in
+  forAll (choose (0, List.genericLength keys - 1)) $ \ i ->
+  findIndex (keys !! fromIntegral i) (fromList keys) == Just i
 
 prop_findIndexMissing key keys = findIndex key filtered == Nothing
   where filtered = fromList $ filter (/= key) keys
 
 -- I couldn't find a convenient way to combine OrderedList and NonEmptyList
-prop_binarySearch (OrderedList []) = forAll $ choose (0, 100) $ \ k ->
+prop_binarySearch (Ordered []) = forAll (choose (0, 100)) $ \ k ->
   binarySearch k (fromList []) == Nothing
-prop_binarySearch (OrderedList keys) = forAll $ choose (0, length keys - 1) $ \ i ->
-  findIndex (keys !! i) (fromList keys) == Just i
+prop_binarySearch (Ordered keys') =
+  let keys = List.nub keys' in
+  forAll (choose (0, List.genericLength keys - 1)) $ \ i ->
+  findIndex (keys !! fromIntegral i) (fromList keys) == Just i
 
-prop_binarySearchMissing (OrderedList keys) = binarySearch key filtered == Nothing
+prop_binarySearchMissing key (Ordered keys) = binarySearch key filtered == Nothing
   where filtered = fromList $ filter (/= key) keys
 
-prop_insert key (OrderedList keys) value =
-  and [ isOrdered $ toList newKeys
+prop_insert key (Ordered keys) value =
+  and [ isOrdered $ Array.elems newKeys
       , isJust (findIndex key newKeys)
-      , bounds newKeys == bounds newValues
-      , List.findIndex (== key) (toList newKeys) ==
-        List.findIndex (== value) (toList newValues)
+      , Array.bounds newKeys == Array.bounds newValues
+      , any (== value) [ newValues ! fromIntegral i |
+                         i <- List.findIndices (== key) $ Array.elems newKeys
+                       ]
       ]
-  where (newKeys, newValues) = insert key value (fromList keys) (fromList values)
+  where (newKeys, newValues) = insert key value (fromList keys) (fromList keys)
 
 isOrdered []       = True
 isOrdered [x]      = True

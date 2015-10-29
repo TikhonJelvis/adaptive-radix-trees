@@ -27,21 +27,26 @@ type Values a = Array Word8 a
 type STKeys s = STUArray s Key Key
 type STValues s a = STArray s Key a
 
+empty :: (IArray a e) => a Word8 e
+empty = Array.array (0, 0) []
+
+isEmpty :: (IArray a e) => a Word8 e -> Bool
+isEmpty arr = let (a, b) = Array.bounds arr in a > b
+
               -- TODO: Switch to unsafeIndex?
 -- | Finds the index of the given key in the array with a linear scan.
 findIndex :: Key -> Keys -> Maybe Key
+findIndex _ arr | isEmpty arr = Nothing
 findIndex target arr = go 0
   where (_, size) = Array.bounds arr
         go !n | n <= size = if arr ! n == target then Just n else go (n + 1)
               | otherwise = Nothing
 
-empty :: (IArray a e) => a Word8 e
-empty = Array.array (0, 0) []
-
 -- | Given a sorted array, returns the index containing the given element, if
 -- any. With multiple equal elements, the index returned is
 -- unspecified.
 binarySearch :: Key -> Keys -> Maybe Key
+binarySearch _ arr | isEmpty arr = Nothing
 binarySearch target arr = go 0 $ snd (Array.bounds arr) + 1
   where go !from !to =
           let i = from + (to - from) `div` 2 in
@@ -97,6 +102,8 @@ snocValues arr x = runSTArray $ do
 -- If the key is already in the keys array some number of times, the
 -- new key will be inserted after all the existing ones.
 insert :: forall a. Key -> a -> Keys -> Values a -> (Keys, Values a)
+insert key value keys values | isEmpty keys =
+  (Array.listArray (0, 0) [key], Array.listArray (0, 0) [value])
 insert key value keys values = runST newArrays
   where size = snd (Array.bounds keys) + 1
 

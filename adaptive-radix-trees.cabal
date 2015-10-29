@@ -50,6 +50,7 @@ test-suite test
                      , Test.Data.ART.Internal.SortingNetwork
 
   build-depends:       adaptive-radix-trees
+                     , array
                      , base
                      , bytestring
                      , tasty
