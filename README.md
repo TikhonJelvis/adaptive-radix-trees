@@ -1,1 +1,1 @@
-A Haskell implementation of persistent adaptive radix trees. Very much a work in progress!
+A Haskell imlementation of adaptive radix trees. Still very much a work in progress—doesn't work at all at the moment.
