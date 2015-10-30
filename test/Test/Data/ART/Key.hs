@@ -3,6 +3,7 @@ module Test.Data.ART.Key where
 import           Control.Monad         (replicateM)
 
 import qualified Data.ByteString       as Byte
+import           Data.Functor          ((<$>))
 
 import           Test.QuickCheck
 import           Test.Tasty
