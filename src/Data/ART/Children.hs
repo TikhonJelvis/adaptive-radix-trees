@@ -60,6 +60,17 @@ data Children a =
   | N256 !Size !(Array Chunk (Maybe a))
     deriving (Show, Eq)
 
+             -- TODO: Figure out how to do this while preserving lazy values!
+-- Helper functions that construct nodes taking care of
+-- strictness.
+n4, n16, n48 :: Size -> Array.Keys -> Array.Values a -> Children a
+n4 size keys values = values `Array.seqValues` N4 size keys values
+n16 size keys values = values `Array.seqValues` N16 size keys values
+n48 size keys values = values `Array.seqValues` N48 size keys values
+
+n256 :: Size -> Array.Values (Maybe a) -> Children a
+n256 size values = values `Array.seqValues` N256 size values
+
 instance NFData a => NFData (Children a) where
   rnf (N4 _ _ values)  = values `deepseq` ()
   rnf (N16 _ _ values) = values `deepseq` ()
@@ -89,18 +100,18 @@ get (N256 _ children) chunk = children ! chunk
 -- with given function. If the value is not in the node, the node is
 -- returned unchanged.
 update :: (a -> a) -> Chunk -> Children a -> Children a
-update f chunk (N4 size keys values) = N4 size keys newValues
+update f chunk (N4 size keys values) = n4 size keys newValues
   where newValues = case Array.findIndex chunk keys of
           Just i  -> values // [(i, f $! values ! i)]
           Nothing -> values
-update f chunk (N16 size keys values) = N16 size keys newValues
+update f chunk (N16 size keys values) = n16 size keys newValues
   where newValues = case Array.binarySearch chunk keys of
           Just i  -> values // [(i, f $! values ! i)]
           Nothing -> values
-update f chunk (N48 size keys values) = N48 size keys newValues
+update f chunk (N48 size keys values) = n48 size keys newValues
   where newValues | keys ! chunk < 0     = values
                   | otherwise = values // [(keys ! chunk, f $! values ! (keys ! chunk))]
-update f chunk (N256 size values) = N256 size newValues
+update f chunk (N256 size values) = n256 size newValues
   where newValues | Just old <- values ! chunk = values // [(chunk, Just $! f old)]
                   | otherwise                  = values
 
@@ -111,27 +122,27 @@ update f chunk (N256 size values) = N256 size newValues
 insertWith :: (a -> a -> a) -> Chunk -> a -> Children a -> Children a
 insertWith f !chunk !value children
   | Just _ <- get children chunk = update (f value) chunk children
-insertWith _ !chunk !value (N4 4 keys values) = N16 5 keys' values'
+insertWith _ !chunk !value (N4 4 keys values) = n16 5 keys' values'
   where (keys', values') = uncurry (Array.insert chunk value) $ sort4 keys values
-insertWith _ !chunk !value (N4 n keys values) = N4 (n + 1) keys' values'
+insertWith _ !chunk !value (N4 n keys values) = n4 (n + 1) keys' values'
   where (keys', values') = (Array.consKeys chunk keys, Array.consValues value values)
 
-insertWith _ !chunk !value (N16 16 keys values) = N48 17 keys' values'
+insertWith _ !chunk !value (N16 16 keys values) = n48 17 keys' values'
   where keys'   = Array.expandToByteKeyArray chunk keys
         values' = Array.consValues value values
-insertWith _ !chunk !value (N16 n keys values) = N16 (n + 1) keys' values'
+insertWith _ !chunk !value (N16 n keys values) = n16 (n + 1) keys' values'
   where (keys', values') = Array.insert chunk value keys values
 
   -- TODO: The bug here was caused because chunks and the indicies
   -- internal to an N48 have the same type. I should probably wrap one
   -- of them.
 insertWith _ !chunk !value (N48 48 keys values) =
-  N256 49 $ Array.expandKeysToValues keys values // [(chunk, Just value)]
-insertWith _ !chunk !value (N48 n keys values) = N48 (n + 1) keys' values'
+  n256 49 $ Array.expandKeysToValues keys values // [(chunk, Just $! value)]
+insertWith _ !chunk !value (N48 n keys values) = n48 (n + 1) keys' values'
   where keys'   = keys // [(chunk, n)]
         values' = Array.snocValues values value
 
-insertWith f !chunk !value (N256 n values) = N256 (n + 1) $ values // [(chunk, Just value)]
+insertWith f !chunk !value (N256 n values) = n256 (n + 1) $ values // [(chunk, Just $! value)]
 
 insert :: Chunk -> a -> Children a -> Children a
 insert = insertWith const

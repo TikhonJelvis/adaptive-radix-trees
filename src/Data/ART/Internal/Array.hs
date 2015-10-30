@@ -33,6 +33,9 @@ empty = Array.array (1, 0) []
 isEmpty :: (IArray a e) => a Word8 e -> Bool
 isEmpty arr = let (a, b) = Array.bounds arr in a > b
 
+seqValues :: Values a -> b -> b
+seqValues values x = foldr seq x (Array.elems values)
+
               -- TODO: Switch to unsafeIndex?
 -- | Finds the index of the given key in the array with a linear scan.
 findIndex :: Key -> Keys -> Maybe Key
