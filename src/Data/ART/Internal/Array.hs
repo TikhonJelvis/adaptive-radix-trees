@@ -159,6 +159,6 @@ expandKeysToValues keys values = runSTArray $ do
   go values' 0
   return values'
   where (_, size) = Array.bounds keys
-        go arr n = when (n <= size) $ do
-          MArray.writeArray arr (keys ! n) (Just $! values ! n)
-          go arr (n + 1)
+        go arr n = do
+          when (keys ! n < 48) $ MArray.writeArray arr n (Just $! values ! (keys ! n))
+          when (n < 255) $ go arr (n + 1)

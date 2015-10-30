@@ -128,7 +128,7 @@ insertWith _ !chunk !value (N16 n keys values) = N16 (n + 1) keys' values'
   -- internal to an N48 have the same type. I should probably wrap one
   -- of them.
 insertWith _ !chunk !value (N48 48 keys values) =
-  N256 49 $ Array.expandKeysToValues keys values
+  N256 49 $ Array.expandKeysToValues keys values // [(chunk, Just value)]
 insertWith _ !chunk !value (N48 n keys values) = N48 (n + 1) keys' values'
   where keys'   = keys // [(chunk, n)]
         values' = Array.snocValues values value
