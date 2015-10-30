@@ -4,19 +4,42 @@ let
 
   inherit (nixpkgs) pkgs;
 
-  f = { mkDerivation, base, bytestring, array, binary, containers, criterion, deepseq
-      , HUnit, primitive , QuickCheck, stdenv, tasty, tasty-quickcheck, vector
-      , vector-algorithms
+  f = { mkDerivation
+      , array
+      , base
+      , binary
+      , bytestring
+      , containers
+      , criterion
+      , deepseq
+      , HUnit
+      , primitive
+      , QuickCheck
+      , stdenv
+      , tasty
+      , tasty-quickcheck
       }:
       mkDerivation {
         pname = "adaptive-radix-trees";
         version = "0.1.0.0";
         src = ./.;
         libraryHaskellDepends = [
-          array base bytestring binary containers criterion deepseq primitive vector vector-algorithms
+          array
+          base
+          binary
+          bytestring
+          containers
+          criterion
+          deepseq
+          primitive
         ];
         testHaskellDepends = [
-          base bytestring HUnit QuickCheck tasty tasty-quickcheck
+          base
+          bytestring
+          HUnit
+          QuickCheck
+          tasty
+          tasty-quickcheck
         ];
         description = "Efficient integer maps based on adaptive radix trees";
         license = stdenv.lib.licenses.bsd3;

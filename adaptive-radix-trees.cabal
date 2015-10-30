@@ -33,8 +33,6 @@ library
                      , array
                      , deepseq
                      , primitive
-                     , vector
-                     , vector-algorithms
 
 test-suite test
   hs-source-dirs:      test

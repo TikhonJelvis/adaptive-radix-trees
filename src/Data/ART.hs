@@ -14,9 +14,6 @@ import           Control.Monad                    (guard, join)
 
 import qualified Data.List                        as List
 import           Data.Maybe                       (fromMaybe)
-import           Data.Vector                      (Vector, (!))
-import qualified Data.Vector                      as V
-import qualified Data.Vector.Unboxed              as U
 import           Data.Word                        (Word8)
 
 import           GHC.Generics                     (Generic)
