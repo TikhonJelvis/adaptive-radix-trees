@@ -82,15 +82,17 @@ prop_expandToByteKeyArray (NonEmpty keys') =
       , all (\ k -> expanded ! k >= 0) keys'
       ]
 
-prop_expandKeysToValues (NonEmpty (kvPairs' :: [(Key, Int)])) =
+prop_expandKeysToValues value (NonEmpty (kvPairs' :: [(Key, Int)])) = forAll keyGen $ \ key ->
+ let kvPairs = List.nubBy ((==) `on` fst) kvPairs'
+     upper = List.genericLength kvPairs - 1
+     keys = expandToByteKeyArray key $ Array.listArray (0, upper) $ map fst kvPairs
+     values = Array.listArray (0, upper + 1) $ value : map snd kvPairs
+     expanded = expandKeysToValues keys values
+  in
   and [ Array.bounds expanded == (0, 255)
       , all (\ (k, v) -> expanded ! k == Just v) kvPairs
       ]
-  where kvPairs = List.nubBy ((==) `on` fst) kvPairs'
-        size = List.genericLength kvPairs - 1
-        keys = Array.listArray (0, size) $ map fst kvPairs
-        values = Array.listArray (0, size) $ map snd kvPairs
-        expanded = expandKeysToValues keys values
+  where keyGen = arbitrary `suchThat` (`notElem` map fst kvPairs')
 
 isOrdered []       = True
 isOrdered [x]      = True

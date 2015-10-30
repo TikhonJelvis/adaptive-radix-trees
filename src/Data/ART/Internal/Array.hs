@@ -151,14 +151,15 @@ expandToByteKeyArray newKey keys = runSTUArray $ do
           MArray.writeArray arr (keys ! n) (n + 1)
           go arr $ n + 1
 
--- | Takes an unboxed byte array of keys and boxed array of values and
+-- | Takes an unboxed byte array of 255 keys and boxed array of values and
 -- produces a boxed 256-element array of Maybe values.
 expandKeysToValues :: Keys -> Values a -> Values (Maybe a)
 expandKeysToValues keys values = runSTArray $ do
   values' <- MArray.newArray (0, 255) Nothing
   go values' 0
   return values'
-  where (_, size) = Array.bounds keys
+  where (_, maxValue) = Array.bounds values
+        (_, size) = Array.bounds keys
         go arr n = do
-          when (keys ! n < 48) $ MArray.writeArray arr n (Just $! values ! (keys ! n))
+          when (keys ! n <= maxValue) $ MArray.writeArray arr n (Just $! values ! (keys ! n))
           when (n < 255) $ go arr (n + 1)
