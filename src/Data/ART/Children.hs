@@ -1,5 +1,4 @@
 {-# LANGUAGE BangPatterns     #-}
-{-# LANGUAGE DeriveAnyClass   #-}
 {-# LANGUAGE DeriveGeneric    #-}
 {-# LANGUAGE ParallelListComp #-}
 -- | The adaptive radix tree contains four different types of internal

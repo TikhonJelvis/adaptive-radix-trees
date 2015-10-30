@@ -1,5 +1,4 @@
 {-# LANGUAGE BangPatterns        #-}
-{-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE MonadComprehensions #-}
@@ -30,7 +29,9 @@ import qualified Data.ART.Key                     as Key
 data ART a = Empty
            | Leaf !Key a
            | Node !Depth !Prefix !(Children (ART a))
-           deriving (Show, Eq, Generic, NFData)
+           deriving (Show, Eq, Generic)
+
+instance NFData a => NFData (ART a) where
 
   -- TODO: Do we need depth in Node, or could we just use Byte.length prefix?
 -- | Get the value associated with the given key, if any.
