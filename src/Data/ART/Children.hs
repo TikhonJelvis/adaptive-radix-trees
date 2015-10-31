@@ -100,18 +100,18 @@ get (N256 _ children) chunk = children ! chunk
 -- returned unchanged.
 update :: (a -> a) -> Chunk -> Children a -> Children a
 update f chunk (N4 size keys values) = n4 size keys newValues
-  where newValues = case Array.findIndex chunk keys of
+  where newValues = {-# SCC "update.newValues.N4" #-} case Array.findIndex chunk keys of
           Just i  -> values // [(i, f $! values ! i)]
           Nothing -> values
 update f chunk (N16 size keys values) = n16 size keys newValues
-  where newValues = case Array.binarySearch chunk keys of
+  where newValues = {-# SCC "update.newValues.N16" #-} case Array.binarySearch chunk keys of
           Just i  -> values // [(i, f $! values ! i)]
           Nothing -> values
 update f chunk (N48 size keys values) = n48 size keys newValues
   where newValues | keys ! chunk < 0     = values
-                  | otherwise = values // [(keys ! chunk, f $! values ! (keys ! chunk))]
+                  | otherwise = {-# SCC "update.newValues.N48" #-} values // [(keys ! chunk, f $! values ! (keys ! chunk))]
 update f chunk (N256 size values) = n256 size newValues
-  where newValues | Just old <- values ! chunk = values // [(chunk, Just $! f old)]
+  where newValues | Just old <- values ! chunk = {-# SCC "update.newValues.N256" #-} values // [(chunk, Just $! f old)]
                   | otherwise                  = values
 
 

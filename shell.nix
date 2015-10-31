@@ -41,6 +41,8 @@ let
           tasty
           tasty-quickcheck
         ];
+        enableLibraryProfiling = true;
+        enableExecutableProfiling = true;
         description = "Efficient integer maps based on adaptive radix trees";
         license = stdenv.lib.licenses.bsd3;
       };
