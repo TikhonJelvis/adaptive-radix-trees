@@ -63,12 +63,12 @@ data Children a =
 -- Helper functions that construct nodes taking care of
 -- strictness.
 n4, n16, n48 :: Size -> Array.Keys -> Array.Values a -> Children a
-n4 size keys values = values `Array.seqValues` N4 size keys values
+n4 size keys values  = values `Array.seqValues` N4 size keys values
 n16 size keys values = values `Array.seqValues` N16 size keys values
 n48 size keys values = values `Array.seqValues` N48 size keys values
 
 n256 :: Size -> Array.Values (Maybe a) -> Children a
-n256 size values = values `Array.seqValues` N256 size values
+n256 size values = N256 size values
 
 instance NFData a => NFData (Children a) where
   rnf (N4 _ _ values)  = values `deepseq` ()
@@ -100,18 +100,26 @@ get (N256 _ children) chunk = children ! chunk
 -- returned unchanged.
 update :: (a -> a) -> Chunk -> Children a -> Children a
 update f chunk (N4 size keys values) = n4 size keys newValues
-  where newValues = {-# SCC "update.newValues.N4" #-} case Array.findIndex chunk keys of
-          Just i  -> values // [(i, f $! values ! i)]
-          Nothing -> values
+  where newValues =
+          {-# SCC "update.newValues.N4" #-}
+          case Array.findIndex chunk keys of
+            Just i  -> values // [(i, f $! values ! i)]
+            Nothing -> values
 update f chunk (N16 size keys values) = n16 size keys newValues
-  where newValues = {-# SCC "update.newValues.N16" #-} case Array.binarySearch chunk keys of
-          Just i  -> values // [(i, f $! values ! i)]
-          Nothing -> values
+  where newValues =
+          {-# SCC "update.newValues.N16" #-}
+          case Array.binarySearch chunk keys of
+            Just i  -> values // [(i, f $! values ! i)]
+            Nothing -> values
 update f chunk (N48 size keys values) = n48 size keys newValues
   where newValues | keys ! chunk < 0     = values
-                  | otherwise = {-# SCC "update.newValues.N48" #-} values // [(keys ! chunk, f $! values ! (keys ! chunk))]
+                  | otherwise =
+                    {-# SCC "update.newValues.N48" #-}
+                    values // [(keys ! chunk, f $! values ! (keys ! chunk))]
 update f chunk (N256 size values) = n256 size newValues
-  where newValues | Just old <- values ! chunk = {-# SCC "update.newValues.N256" #-} values // [(chunk, Just $! f old)]
+  where newValues | Just old <- values ! chunk =
+                      {-# SCC "update.newValues.N256" #-}
+                      values // [(chunk, Just $! f old)]
                   | otherwise                  = values
 
 
@@ -136,12 +144,17 @@ insertWith _ !chunk !value (N16 n keys values) = n16 (n + 1) keys' values'
   -- internal to an N48 have the same type. I should probably wrap one
   -- of them.
 insertWith _ !chunk !value (N48 48 keys values) =
-  n256 49 $ Array.expandKeysToValues keys values // [(chunk, Just $! value)]
+  {-# SCC "update.insertWith.48to256" #-}
+  n256 49 newValues
+  where newValues = Array.expandKeysToValues keys values // [(chunk, Just $! value)]
 insertWith _ !chunk !value (N48 n keys values) = n48 (n + 1) keys' values'
   where keys'   = keys // [(chunk, n)]
         values' = Array.snocValues values value
 
-insertWith f !chunk !value (N256 n values) = n256 (n + 1) $ values // [(chunk, Just $! value)]
+insertWith f !chunk !value (N256 n values) =
+  {-# SCC "update.insertWith.N256" #-}
+  n256 (n + 1) newValues
+  where newValues = values // [(chunk, Just $! value)]
 
 insert :: Chunk -> a -> Children a -> Children a
 insert = insertWith const
