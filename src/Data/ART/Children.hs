@@ -1,6 +1,8 @@
 {-# LANGUAGE BangPatterns     #-}
 {-# LANGUAGE DeriveGeneric    #-}
 {-# LANGUAGE ParallelListComp #-}
+
+{-# OPTIONS_GHC -funbox-strict-fields #-}
 -- | The adaptive radix tree contains four different types of internal
 -- nodes, depending on how many children they store:
 --

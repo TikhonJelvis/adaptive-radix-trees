@@ -79,6 +79,7 @@ benchmark benchmarks
 
   build-depends:       base
                      , adaptive-radix-trees
+                     , array
                      , deepseq
                      , bytestring
                      , containers
