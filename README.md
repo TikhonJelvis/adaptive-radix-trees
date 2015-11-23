@@ -3,7 +3,7 @@
 A Haskell imlementation of [adaptive radix trees][art]¹. Very much a work in progress:
 
   * reading and inserting values seems to work based on a suite of QuickCheck tests.
-  * **performance is bad**: on my single benchmark that creates a 10,000 element tree, it currently performs ~20x worse than `Data.IntMap`
+  * **performance is bad**: on my current ad hoc benchmarks, it performs 2x–10x worse than `Data.IntMap`.
 
 Current roadmap:
 
